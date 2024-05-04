@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+    stages {
+        stage('Remove old Docker containers and images') {
+            steps {
+                sh 'docker rm -f staging-admin'
+                sh 'docker system prune -f'
+            }
+        }
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t simpliclarify/staging-admin .'
+            }
+        }
+        stage('Deploy Docker Image') {
+            steps {
+                sh 'docker run --name staging-admin -p 3081:3081 --env-file /home/jenkins/.env-staging-admin --restart always -v /home/ubuntu/.aws/credentials:/home/node/.aws/credentials -v /home/ubuntu/logs/access.log:/home/node/app/access.log -d simpliclarify/staging-admin'
+            }
+        }
+        stage('Run test scripts') {
+            steps {
+                sh 'cd /home/jenkins/staging/SimpliClariFy-Admin-Backend'
+                sh 'git config remote.origin.url git@github.com:SimpliClariFy/SimpliClariFy-Admin-Backend.git'
+                sh 'git checkout staging'
+                sh 'git pull origin staging'
+                sh 'npm install'
+                sh 'npm run test'
+            }
+        }
+        stage('Push docker image to AWS registry') {
+            steps {
+                sh 'docker tag simpliclarify/staging-admin 101602609699.dkr.ecr.ap-south-1.amazonaws.com/staging-admin'
+                sh 'aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 101602609699.dkr.ecr.ap-south-1.amazonaws.com'
+                sh 'docker push 101602609699.dkr.ecr.ap-south-1.amazonaws.com/staging-admin'
+            }
+        }
+        stage('Stop docker container') {
+            steps {
+                sh 'docker rm -f staging-admin'
+            }
+        }
+        stage('Pull latest docker image in staging server') {
+            steps {
+                sh 'ssh -i /home/ubuntu/simp.pem ubuntu@15.206.94.249 "aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 101602609699.dkr.ecr.ap-south-1.amazonaws.com"'
+                sh 'ssh -i /home/ubuntu/simp.pem ubuntu@15.206.94.249 "docker pull 101602609699.dkr.ecr.ap-south-1.amazonaws.com/staging-admin"'
+                sh 'ssh -i /home/ubuntu/simp.pem ubuntu@15.206.94.249 "docker rm -f staging-admin"'
+                sh 'ssh -i /home/ubuntu/simp.pem ubuntu@15.206.94.249 "docker run --name staging-admin -p 3081:3081 --env-file /home/ubuntu/.env-staging-admin --restart always -v /home/ubuntu/.aws/credentials:/home/node/.aws/credentials -v /home/ubuntu/logs/staging-admin.log:/home/node/app/access.log -d 101602609699.dkr.ecr.ap-south-1.amazonaws.com/staging-admin"'
+                sh 'ssh -i /home/ubuntu/simp.pem ubuntu@15.206.94.249 "docker system prune -f"'
+            }
+        }
+    }
+}

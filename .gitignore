@@ -1,0 +1,8 @@
+node_modules
+.vscode
+aws_command.bat
+start-server.sh
+mentorOnboarding.xlsx
+start-windows-server.bat
+access.log
+.env
