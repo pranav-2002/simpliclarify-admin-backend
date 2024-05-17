@@ -11,7 +11,7 @@ import _MentorRequestProfile from "../schemas/_MentorUpdateProfile";
 import { getCompanyLogo, getUniversityLogo } from "../helpers/mentorExtraInfo";
 import fetch from "node-fetch";
 
-const ML_MODEL_URL = process.env.ML_MODEL_URL || '';
+const ML_MODEL_URL = process.env.ML_MODEL_URL || "";
 
 const MentorModel = {
   getAllMentorsAdmin,
@@ -73,62 +73,95 @@ async function getIndividualMentorAdmin(body) {
 }
 
 async function sendMentorToDigitalTwin(mentor, operation) {
-  if (!(operation === 'add' || operation === 'update')) {
-    console.log(`Invalid operation ${operation} for send mentor to digital twin provided`);
+  if (!(operation === "add" || operation === "update")) {
+    console.log(
+      `Invalid operation ${operation} for send mentor to digital twin provided`
+    );
     return;
   }
-  let undergraduation = mentor.educationInformation.length > 0 ? mentor.educationInformation[mentor.educationInformation.length - 1] : null;
+  let undergraduation =
+    mentor.educationInformation.length > 0
+      ? mentor.educationInformation[mentor.educationInformation.length - 1]
+      : null;
 
   if (undergraduation == null) {
-    console.log('Invalid mentor undergraduation details: printing mentor details below');
+    console.log(
+      "Invalid mentor undergraduation details: printing mentor details below"
+    );
     console.log(mentor);
     return;
   }
 
-  if (ML_MODEL_URL === '') {
-    console.log('ML microservice is not reachable at the moment');
+  if (ML_MODEL_URL === "") {
+    console.log("ML microservice is not reachable at the moment");
     return;
   }
 
   let request = {
-    "id": mentor._id,
-    "tenthscore": (mentor.tenthPercentage ? mentor.tenthPercentage : 0).toString(),
-    "twelfthscore": (mentor.twelfthPercentage ? mentor.twelfthPercentage : 0).toString(),
-    "interests": mentor.interests && mentor.interests.length > 0 ? mentor.interests.join(",") : "None",
-    "university": undergraduation.universityName,
-    "degree": undergraduation.degreeType,
-    "course": undergraduation.course,
-    "CGPA": (undergraduation.cgpa ? undergraduation.cgpa : 0).toString(),
-    "GRE": (mentor.certifications.GRE ? mentor.certifications.GRE : 0).toString(),
-    "GMAT": (mentor.certifications.GMAT ? mentor.certifications.GMAT : 0).toString(),
-    "TOEFL": (mentor.certifications.TOEFL ? mentor.certifications.TOEFL : 0).toString(),
-    "IELTS": (mentor.certifications.IELTS ? mentor.certifications.IELTS : 0).toString(),
-    "CAT": (mentor.certifications.CAT ? mentor.certifications.CAT : 0).toString(),
-    "GATE": (mentor.certifications.GATE ? mentor.certifications.GATE : 0).toString(),
-    "papersPublished": (mentor.papersPublished ? mentor.papersPublished : 0).toString(),
-    "patentsPublished": (mentor.patentsPublished ? mentor.patentsPublished : 0).toString(),
-    "country": undergraduation.country,
-    "city": undergraduation.city
-  }
+    id: mentor._id,
+    tenthscore: (mentor.tenthPercentage
+      ? mentor.tenthPercentage
+      : 0
+    ).toString(),
+    twelfthscore: (mentor.twelfthPercentage
+      ? mentor.twelfthPercentage
+      : 0
+    ).toString(),
+    interests:
+      mentor.interests && mentor.interests.length > 0
+        ? mentor.interests.join(",")
+        : "None",
+    university: undergraduation.universityName,
+    degree: undergraduation.degreeType,
+    course: undergraduation.course,
+    CGPA: (undergraduation.cgpa ? undergraduation.cgpa : 0).toString(),
+    GRE: (mentor.certifications.GRE ? mentor.certifications.GRE : 0).toString(),
+    GMAT: (mentor.certifications.GMAT
+      ? mentor.certifications.GMAT
+      : 0
+    ).toString(),
+    TOEFL: (mentor.certifications.TOEFL
+      ? mentor.certifications.TOEFL
+      : 0
+    ).toString(),
+    IELTS: (mentor.certifications.IELTS
+      ? mentor.certifications.IELTS
+      : 0
+    ).toString(),
+    CAT: (mentor.certifications.CAT ? mentor.certifications.CAT : 0).toString(),
+    GATE: (mentor.certifications.GATE
+      ? mentor.certifications.GATE
+      : 0
+    ).toString(),
+    papersPublished: (mentor.papersPublished
+      ? mentor.papersPublished
+      : 0
+    ).toString(),
+    patentsPublished: (mentor.patentsPublished
+      ? mentor.patentsPublished
+      : 0
+    ).toString(),
+    country: undergraduation.country,
+    city: undergraduation.city,
+  };
 
   let URL;
-  if (operation === 'add') {
-    URL = ML_MODEL_URL + '/addmentor';
+  if (operation === "add") {
+    URL = ML_MODEL_URL + "/addmentor";
   } else {
-    URL = ML_MODEL_URL + '/updatementor';
+    URL = ML_MODEL_URL + "/updatementor";
   }
 
   try {
     let response = await fetch(URL, {
-      method: 'POST',
+      method: "POST",
       body: JSON.stringify(request),
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" },
     });
 
     response = await response.json();
     console.log("Successfully added/updated the mentor");
-  }
-  catch (e) {
+  } catch (e) {
     console.log(e);
   }
 }
@@ -187,7 +220,7 @@ async function updateDetails(body) {
         }
         mentorToUpdate.profileStatus = profileStatus;
         await mentor.save();
-        await sendMentorToDigitalTwin(mentor, 'update');
+        await sendMentorToDigitalTwin(mentor, "update");
         await mentorToUpdate.save();
         return { mentor };
 
@@ -314,7 +347,7 @@ async function changeStatus(body) {
         await _addLogosToUniversityAndCompany(mentorUpdate);
         await mentorUpdate.save();
 
-        await sendMentorToDigitalTwin(mentorUpdate, 'add');
+        await sendMentorToDigitalTwin(mentorUpdate, "add");
 
         const mailTemplate = await _MailTemplate.findOne({
           templateId: "TEMPLATE_MENTOR_ACCEPT",
@@ -343,6 +376,7 @@ async function changeStatus(body) {
     }
     return;
   } catch (error) {
+    console.log(error);
     throw new CustomError({ error });
   }
 }
